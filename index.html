@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline'">
+<title>Slidex</title>
+<style>
+:root{--accent:#c43e1c;--bar:#f3f3f3;--line:#d2d2d2;--ink:#242424;--muted:#6b6b6b;--bg:#d9dce1}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{font:13px "Segoe UI",-apple-system,system-ui,sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column;user-select:none}
+#title{background:var(--accent);color:#fff;display:flex;align-items:center;gap:6px;padding:6px 10px}
+#title b{font-size:14px;margin-right:10px}
+#title button{background:transparent;color:#fff;border:1px solid transparent;border-radius:4px;padding:4px 10px;cursor:pointer;font:inherit}
+#title button:hover{background:rgba(255,255,255,.18)}
+#docname{margin-left:auto;opacity:.9}
+#tabs{background:var(--bar);display:flex;gap:2px;padding:4px 10px 0;border-bottom:1px solid var(--line)}
+#tabs button{border:0;background:transparent;padding:6px 14px;cursor:pointer;font:inherit;border-bottom:3px solid transparent}
+#tabs button.on{border-color:var(--accent);font-weight:600}
+#ribbon{background:var(--bar);border-bottom:1px solid var(--line);padding:6px 10px;min-height:78px}
+.panel{display:none;gap:0;align-items:stretch}.panel.on{display:flex;flex-wrap:wrap}
+.grp{display:flex;flex-direction:column;padding:0 10px;border-right:1px solid var(--line)}
+.grp .row{display:flex;gap:4px;align-items:center;flex-wrap:wrap;min-height:34px;padding:2px 0}
+.grp label{font-size:11px;color:var(--muted);text-align:center;margin-top:auto}
+.ribbon button,#ribbon button,#ribbon select{font:inherit;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:4px;padding:4px 9px;min-height:28px;cursor:pointer}
+#ribbon button:hover,#ribbon select:hover{border-color:var(--accent)}
+#ribbon button.on{background:#fbe3dc;border-color:var(--accent)}
+#ribbon input[type=color]{width:34px;height:28px;padding:1px;border:1px solid var(--line);border-radius:4px;background:#fff}
+#ribbon input[type=number]{width:58px;font:inherit;padding:4px;border:1px solid var(--line);border-radius:4px}
+#main{flex:1;display:flex;min-height:0}
+#thumbs{width:200px;background:#e8e9ec;border-right:1px solid var(--line);overflow:auto;padding:10px}
+.th{display:flex;gap:6px;margin-bottom:10px;cursor:pointer}
+.th span{width:18px;text-align:right;color:var(--muted);font-size:12px;padding-top:2px}
+.th .box{width:160px;height:90px;position:relative;overflow:hidden;border:2px solid transparent;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.th.on .box{border-color:var(--accent)}
+.th .box .slide{transform:scale(.1667);transform-origin:0 0;position:absolute;left:0;top:0}
+#work{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+#frame{position:relative}
+#stage{position:absolute;left:0;top:0;transform-origin:0 0}
+.slide{width:960px;height:540px;position:relative;overflow:hidden}
+.el{position:absolute;overflow:hidden;white-space:pre-wrap;padding:8px;line-height:1.25;outline:none}
+.el.img,.el.rect,.el.ellipse{padding:0}.el img{width:100%;height:100%;display:block;pointer-events:none}
+#stage .el{cursor:move}
+#sel{position:absolute;border:2px solid #2b7cd3;pointer-events:none}
+#sel i{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #2b7cd3;border-radius:50%;pointer-events:auto}
+#sel i.nw{left:-7px;top:-7px;cursor:nwse-resize}#sel i.ne{right:-7px;top:-7px;cursor:nesw-resize}#sel i.sw{left:-7px;bottom:-7px;cursor:nesw-resize}#sel i.se{right:-7px;bottom:-7px;cursor:nwse-resize}
+#status{background:var(--bar);border-top:1px solid var(--line);padding:4px 12px;color:var(--muted);display:flex;gap:16px}
+#toast{margin-left:auto}
+#show{position:fixed;inset:0;background:#000;z-index:50;overflow:hidden}
+#show .slide{position:absolute;left:50%;top:50%;transform-origin:0 0}
+#show[hidden]{display:none}
+#printarea{display:none}
+@media print{
+  body>*:not(#printarea){display:none!important}
+  #printarea{display:block}
+  .pslide{width:960px;height:540px;overflow:hidden;position:relative;break-after:page}
+  @page{size:960px 540px;margin:0}
+}
+</style>
+</head>
+<body>
+<div id="title"><b>Slidex</b>
+  <button id="fNew">New</button><button id="fOpen">Open</button><button id="fSave">Save</button><button id="fSaveAs">Save as</button><button id="fPdf">Export PDF</button><button id="fPptx">Export PowerPoint</button>
+  <span id="docname">Untitled</span></div>
+<div id="tabs"></div>
+<div id="ribbon">
+  <div class="panel on" data-tab="Home">
+    <div class="grp"><div class="row"><button id="newSlide">New slide</button><select id="layout"><option value="content">Title and content</option><option value="title">Title slide</option><option value="titleonly">Title only</option><option value="blank">Blank</option></select></div><div class="row"><button id="dupSlide">Duplicate</button><button id="delSlide">Delete slide</button></div><label>Slides</label></div>
+    <div class="grp"><div class="row"><select id="font"><option>Calibri</option><option>Arial</option><option>Georgia</option><option>Times New Roman</option><option>Verdana</option><option>Courier New</option></select><input id="size" type="number" min="8" max="200" value="26" title="Font size"><input id="color" type="color" value="#1f2937" title="Text or shape color"></div>
+      <div class="row"><button id="bold"><b>B</b></button><button id="ital"><i>I</i></button><button id="aL">Left</button><button id="aC">Center</button><button id="aR">Right</button></div><label>Font and paragraph</label></div>
+    <div class="grp"><div class="row"><button id="front">Bring to front</button><button id="back">Send to back</button></div><div class="row"><button id="dupEl">Duplicate</button><button id="delEl">Delete</button><button id="undo">Undo</button><button id="redo">Redo</button></div><label>Arrange</label></div>
+  </div>
+  <div class="panel" data-tab="Insert">
+    <div class="grp"><div class="row"><button id="addText">Text box</button><button id="addRect">Rectangle</button><button id="addOval">Oval</button><button id="addImg">Picture</button><input id="imgfile" type="file" accept="image/*" hidden></div><label>Insert</label></div>
+  </div>
+  <div class="panel" data-tab="Design">
+    <div class="grp"><div class="row" id="themes"></div><label>Themes</label></div>
+    <div class="grp"><div class="row"><input id="bgc" type="color" value="#ffffff" title="Background of this slide"><button id="bgAll">Apply to all slides</button></div><label>Background</label></div>
+  </div>
+  <div class="panel" data-tab="Slide Show">
+    <div class="grp"><div class="row"><button id="fromStart">From beginning</button><button id="fromCur">From current slide</button></div><label>Start slide show</label></div>
+  </div>
+</div>
+<div id="main"><div id="thumbs"></div><div id="work"><div id="frame"><div id="stage"></div></div></div></div>
+<div id="status"><span id="pos"></span><span>Double-click text to edit. Delete removes. Arrow keys nudge. Ctrl/Cmd+Z undo.</span><span id="toast"></span></div>
+<div id="show" hidden></div><div id="printarea"></div>
+
+<script>
+const W = 960, H = 540, $ = id => document.getElementById(id);
+const themes = { Office: { bg: '#ffffff', fg: '#1f2937', ac: '#2563eb' }, Dark: { bg: '#111827', fg: '#f3f4f6', ac: '#f59e0b' }, Ocean: { bg: '#e6f4f8', fg: '#0b3b4a', ac: '#0e7490' }, Sunset: { bg: '#fff3e6', fg: '#4a2511', ac: '#ea580c' } };
+const uid = () => Math.random().toString(36).slice(2, 9);
+const tx = (x, y, w, h, s, size, o = {}) => ({ id: uid(), t: 'text', x, y, w, h, s, size, b: 0, i: 0, c: null, al: 'left', f: 'Calibri', ...o });
+const LAYOUTS = {
+  title: () => [tx(80, 170, 800, 110, 'Click to add title', 54, { b: 1, al: 'center' }), tx(80, 300, 800, 60, 'Click to add subtitle', 26, { al: 'center' })],
+  content: () => [tx(60, 40, 840, 90, 'Click to add title', 40, { b: 1 }), tx(60, 150, 840, 340, '• Click to add text', 26)],
+  titleonly: () => [tx(60, 40, 840, 90, 'Click to add title', 40, { b: 1 })],
+  blank: () => []
+};
+let doc = { theme: themes.Office, slides: [{ bg: null, els: LAYOUTS.title() }] }, cur = 0, selId = null, file = null, editing = false, scale = 1, undoS = [], redoS = [], dirty = false;
+const slide = () => doc.slides[cur], sel = () => slide().els.find(e => e.id === selId);
+
+// ---------- drawing ----------
+function elDOM(e) {
+  const d = document.createElement('div'); d.className = 'el ' + e.t; d.dataset.id = e.id;
+  Object.assign(d.style, { left: e.x + 'px', top: e.y + 'px', width: e.w + 'px', height: e.h + 'px' });
+  if (e.t === 'text') { Object.assign(d.style, { fontSize: e.size + 'px', fontWeight: e.b ? 700 : 400, fontStyle: e.i ? 'italic' : 'normal', color: e.c || doc.theme.fg, textAlign: e.al, fontFamily: e.f + ',sans-serif' }); d.textContent = e.s; }
+  else if (e.t === 'img') { const im = document.createElement('img'); im.src = e.src; d.appendChild(im); }
+  else { d.style.background = e.fill || doc.theme.ac; if (e.t === 'ellipse') d.style.borderRadius = '50%'; }
+  return d;
+}
+function slideDOM(s) { const d = document.createElement('div'); d.className = 'slide'; d.style.background = s.bg || doc.theme.bg; s.els.forEach(e => d.appendChild(elDOM(e))); return d; }
+function renderStage() {
+  const st = $('stage'); st.innerHTML = ''; const s = slide(); st.style.width = W + 'px'; st.style.height = H + 'px'; st.style.background = s.bg || doc.theme.bg;
+  s.els.forEach(e => st.appendChild(elDOM(e)));
+  const e = sel(); if (e) { const b = document.createElement('div'); b.id = 'sel'; Object.assign(b.style, { left: e.x + 'px', top: e.y + 'px', width: e.w + 'px', height: e.h + 'px' }); ['nw', 'ne', 'sw', 'se'].forEach(k => { const i = document.createElement('i'); i.className = k; i.dataset.k = k; b.appendChild(i); }); st.appendChild(b); }
+}
+function renderThumbs() {
+  const t = $('thumbs'); t.innerHTML = '';
+  doc.slides.forEach((s, i) => { const r = document.createElement('div'); r.className = 'th' + (i === cur ? ' on' : ''); const n = document.createElement('span'); n.textContent = i + 1; const b = document.createElement('div'); b.className = 'box'; b.appendChild(slideDOM(s)); r.append(n, b); r.onclick = () => { cur = i; selId = null; renderAll(); }; t.appendChild(r); });
+}
+function syncRibbon() {
+  const e = sel(); $('bgc').value = slide().bg || doc.theme.bg;
+  if (e && e.t === 'text') { $('font').value = e.f; $('size').value = e.size; $('color').value = e.c || doc.theme.fg; $('bold').classList.toggle('on', !!e.b); $('ital').classList.toggle('on', !!e.i); }
+  else if (e) $('color').value = e.fill || doc.theme.ac;
+  $('pos').textContent = 'Slide ' + (cur + 1) + ' of ' + doc.slides.length;
+  $('docname').textContent = (file ? file.split(/[\\/]/).pop() : 'Untitled') + (dirty ? ' •' : '');
+}
+function fit() { const w = $('work'); scale = Math.min((w.clientWidth - 48) / W, (w.clientHeight - 48) / H); $('frame').style.width = W * scale + 'px'; $('frame').style.height = H * scale + 'px'; $('stage').style.transform = 'scale(' + scale + ')'; }
+function renderAll() { fit(); renderStage(); renderThumbs(); syncRibbon(); }
+addEventListener('resize', fit);
+
+// ---------- history ----------
+function snap() { undoS.push(JSON.stringify(doc)); if (undoS.length > 100) undoS.shift(); redoS = []; dirty = true; }
+function restore(s) { doc = JSON.parse(s); cur = Math.min(cur, doc.slides.length - 1); selId = null; dirty = true; renderAll(); }
+function undo() { if (undoS.length) { redoS.push(JSON.stringify(doc)); restore(undoS.pop()); } }
+function redo() { if (redoS.length) { undoS.push(JSON.stringify(doc)); restore(redoS.pop()); } }
+function toast(m) { $('toast').textContent = m; setTimeout(() => $('toast').textContent = '', 3500); }
+
+// ---------- direct manipulation ----------
+const stage = $('stage');
+function pt(ev) { const r = $('frame').getBoundingClientRect(); return { x: (ev.clientX - r.left) / scale, y: (ev.clientY - r.top) / scale }; }
+stage.addEventListener('pointerdown', ev => {
+  if (editing) return;
+  const h = ev.target.closest('#sel i'), el = ev.target.closest('.el');
+  if (!h && !el) { selId = null; renderStage(); syncRibbon(); return; }
+  if (el) selId = el.dataset.id;
+  const e = sel(); if (!e) return; snap();
+  const p0 = pt(ev), o = { x: e.x, y: e.y, w: e.w, h: e.h }, k = h && h.dataset.k;
+  const move = m => {
+    const p = pt(m), dx = p.x - p0.x, dy = p.y - p0.y;
+    if (!k) { e.x = Math.round(o.x + dx); e.y = Math.round(o.y + dy); }
+    else { let x = o.x, y = o.y, w = o.w, hh = o.h; if (k.includes('e')) w = o.w + dx; if (k.includes('s')) hh = o.h + dy; if (k.includes('w')) { x = o.x + dx; w = o.w - dx; } if (k.includes('n')) { y = o.y + dy; hh = o.h - dy; }
+      if (w >= 24 && hh >= 24) Object.assign(e, { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(hh) }); }
+    renderStage();
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); renderThumbs(); syncRibbon(); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up); renderStage(); syncRibbon();
+});
+stage.addEventListener('dblclick', ev => {
+  const el = ev.target.closest('.el.text'); if (!el) return; selId = el.dataset.id; const e = sel(); if (!e) return;
+  editing = true; el.contentEditable = 'plaintext-only'; el.style.cursor = 'text'; el.style.userSelect = 'text'; el.focus();
+  getSelection().selectAllChildren(el);
+  el.onblur = () => { editing = false; const t = el.innerText.replace(/\n$/, ''); if (t !== e.s) { snap(); e.s = t; } renderAll(); };
+});
+addEventListener('keydown', ev => {
+  const mod = ev.ctrlKey || ev.metaKey, k = ev.key;
+  if (!$('show').hidden) return;
+  if (mod && k.toLowerCase() === 's') { ev.preventDefault(); saveDoc(ev.shiftKey); return; }
+  if (editing) { if (k === 'Escape') document.activeElement.blur(); return; }
+  if (/INPUT|SELECT/.test(document.activeElement.tagName)) return;
+  if (mod && k.toLowerCase() === 'z') { ev.preventDefault(); ev.shiftKey ? redo() : undo(); }
+  else if (mod && k.toLowerCase() === 'y') { ev.preventDefault(); redo(); }
+  else if (mod && k.toLowerCase() === 'd') { ev.preventDefault(); dupEl(); }
+  else if (k === 'F5') { ev.preventDefault(); present(ev.shiftKey ? cur : 0); }
+  else if (sel() && (k === 'Delete' || k === 'Backspace')) { snap(); slide().els = slide().els.filter(e => e.id !== selId); selId = null; renderAll(); }
+  else if (sel() && k.startsWith('Arrow')) { ev.preventDefault(); snap(); const e = sel(), d = ev.shiftKey ? 10 : 1; if (k === 'ArrowLeft') e.x -= d; if (k === 'ArrowRight') e.x += d; if (k === 'ArrowUp') e.y -= d; if (k === 'ArrowDown') e.y += d; renderAll(); }
+  else if (!sel() && (k === 'ArrowDown' || k === 'ArrowRight') && cur < doc.slides.length - 1) { cur++; renderAll(); }
+  else if (!sel() && (k === 'ArrowUp' || k === 'ArrowLeft') && cur > 0) { cur--; renderAll(); }
+});
+
+// ---------- ribbon actions ----------
+const tabs = [...document.querySelectorAll('.panel')];
+tabs.forEach(p => { const b = document.createElement('button'); b.textContent = p.dataset.tab; if (p.classList.contains('on')) b.classList.add('on'); b.onclick = () => { tabs.forEach(q => q.classList.toggle('on', q === p)); [...$('tabs').children].forEach(x => x.classList.toggle('on', x === b)); }; $('tabs').appendChild(b); });
+Object.entries(themes).forEach(([n, t]) => { const b = document.createElement('button'); b.textContent = n; b.style.borderLeft = '14px solid ' + t.ac; b.onclick = () => { snap(); doc.theme = t; doc.slides.forEach(s => s.bg = null); doc.slides.forEach(s => s.els.forEach(e => { if (e.t === 'text') e.c = null; else if (e.t !== 'img') e.fill = null; })); renderAll(); }; $('themes').appendChild(b); });
+const add = e => { snap(); slide().els.push(e); selId = e.id; renderAll(); };
+const fmt = fn => () => { const e = sel(); if (!e) return toast('Select a text box or shape first'); snap(); fn(e); renderAll(); };
+$('newSlide').onclick = () => { snap(); doc.slides.splice(cur + 1, 0, { bg: null, els: LAYOUTS[$('layout').value]() }); cur++; selId = null; renderAll(); };
+$('dupSlide').onclick = () => { snap(); const c = JSON.parse(JSON.stringify(slide())); c.els.forEach(e => e.id = uid()); doc.slides.splice(cur + 1, 0, c); cur++; selId = null; renderAll(); };
+$('delSlide').onclick = () => { if (doc.slides.length < 2) return toast('A presentation needs at least one slide'); snap(); doc.slides.splice(cur, 1); cur = Math.min(cur, doc.slides.length - 1); selId = null; renderAll(); };
+$('addText').onclick = () => add(tx(120, 200, 400, 80, 'Text box', 28));
+$('addRect').onclick = () => add({ id: uid(), t: 'rect', x: 340, y: 180, w: 280, h: 160, fill: null });
+$('addOval').onclick = () => add({ id: uid(), t: 'ellipse', x: 340, y: 180, w: 280, h: 160, fill: null });
+$('addImg').onclick = () => $('imgfile').click();
+$('imgfile').onchange = ev => { const f = ev.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => { const k = Math.min(1, 560 / im.width, 400 / im.height); add({ id: uid(), t: 'img', x: 100, y: 80, w: Math.round(im.width * k), h: Math.round(im.height * k), src: r.result }); }; im.src = r.result; }; r.readAsDataURL(f); ev.target.value = ''; };
+$('font').onchange = fmt(e => { if (e.t === 'text') e.f = $('font').value; });
+$('size').onchange = fmt(e => { if (e.t === 'text') e.size = Math.max(8, Math.min(200, +$('size').value || 26)); });
+$('color').oninput = fmt(e => { if (e.t === 'text') e.c = $('color').value; else if (e.t !== 'img') e.fill = $('color').value; });
+$('bold').onclick = fmt(e => { if (e.t === 'text') e.b = e.b ? 0 : 1; });
+$('ital').onclick = fmt(e => { if (e.t === 'text') e.i = e.i ? 0 : 1; });
+$('aL').onclick = fmt(e => e.al = 'left'); $('aC').onclick = fmt(e => e.al = 'center'); $('aR').onclick = fmt(e => e.al = 'right');
+$('front').onclick = () => { const e = sel(); if (e) { snap(); slide().els = [...slide().els.filter(x => x !== e), e]; renderAll(); } };
+$('back').onclick = () => { const e = sel(); if (e) { snap(); slide().els = [e, ...slide().els.filter(x => x !== e)]; renderAll(); } };
+function dupEl() { const e = sel(); if (!e) return; snap(); const c = { ...JSON.parse(JSON.stringify(e)), id: uid(), x: e.x + 20, y: e.y + 20 }; slide().els.push(c); selId = c.id; renderAll(); }
+$('dupEl').onclick = dupEl;
+$('delEl').onclick = () => { if (sel()) { snap(); slide().els = slide().els.filter(e => e.id !== selId); selId = null; renderAll(); } };
+$('undo').onclick = undo; $('redo').onclick = redo;
+$('bgc').oninput = () => { snap(); slide().bg = $('bgc').value; renderAll(); };
+$('bgAll').onclick = () => { snap(); doc.slides.forEach(s => s.bg = $('bgc').value); renderAll(); };
+
+// ---------- files ----------
+function confirmDiscard() { return !dirty || confirm('You have unsaved changes. Continue without saving?'); }
+async function saveDoc(as) { const p = await api.save(JSON.stringify(doc), file, as); if (p) { file = p; dirty = false; syncRibbon(); toast('Saved'); } }
+$('fSave').onclick = () => saveDoc(false); $('fSaveAs').onclick = () => saveDoc(true);
+$('fNew').onclick = () => { if (!confirmDiscard()) return; doc = { theme: themes.Office, slides: [{ bg: null, els: LAYOUTS.title() }] }; cur = 0; selId = null; file = null; undoS = []; redoS = []; dirty = false; renderAll(); };
+$('fOpen').onclick = async () => {
+  if (!confirmDiscard()) return; const r = await api.open(); if (!r) return;
+  try { const d = JSON.parse(r.data); if (!d.slides || !d.theme) throw 0; doc = d; cur = 0; selId = null; file = r.file; undoS = []; redoS = []; dirty = false; renderAll(); } catch (e) { toast('That file is not a Slidex presentation'); }
+};
+$('fPptx').onclick = async () => { const p = await api.pptx(doc); if (p) toast('Exported PowerPoint file'); };
+$('fPdf').onclick = async () => {
+  const pa = $('printarea'); pa.innerHTML = ''; doc.slides.forEach(s => { const d = slideDOM(s); d.className = 'slide pslide'; pa.appendChild(d); });
+  try { const p = await api.pdf(); if (p) toast('Exported PDF'); } finally { pa.innerHTML = ''; }
+};
+
+// ---------- slide show ----------
+function present(from) {
+  let i = from; const o = $('show'); o.hidden = false; o.requestFullscreen && o.requestFullscreen().catch(() => {});
+  const draw = () => { o.innerHTML = ''; const s = slideDOM(doc.slides[i]), k = Math.min(innerWidth / W, innerHeight / H); s.style.transform = 'translate(' + (-W * k / 2) + 'px,' + (-H * k / 2) + 'px) scale(' + k + ')'; o.appendChild(s); };
+  const go = d => { const n = i + d; if (n >= doc.slides.length) return stop(); if (n >= 0) { i = n; draw(); } };
+  const key = ev => { if (['ArrowRight', 'ArrowDown', ' ', 'PageDown', 'Enter'].includes(ev.key)) go(1); else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(ev.key)) go(-1); else if (ev.key === 'Escape') stop(); ev.preventDefault(); };
+  const click = () => go(1), rs = () => draw();
+  function stop() { removeEventListener('keydown', key, true); o.removeEventListener('click', click); removeEventListener('resize', rs); o.hidden = true; o.innerHTML = ''; if (document.fullscreenElement) document.exitFullscreen(); }
+  addEventListener('keydown', key, true); o.addEventListener('click', click); addEventListener('resize', rs);
+  document.addEventListener('fullscreenchange', function f() { if (!document.fullscreenElement) { document.removeEventListener('fullscreenchange', f); if (!o.hidden) stop(); } });
+  draw();
+}
+$('fromStart').onclick = () => present(0); $('fromCur').onclick = () => present(cur);
+addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+renderAll();
+</script>
+</body>
+</html>
